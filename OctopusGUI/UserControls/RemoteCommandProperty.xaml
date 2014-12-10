@@ -1,0 +1,93 @@
+﻿<UserControl x:Class="OctopusGUI.RemoteCommandProperty"
+             xmlns:UserControls="clr-namespace:OctopusGUI.UserControls"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" Width="800" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"></ColumnDefinition>
+                    <ColumnDefinition Width="150"></ColumnDefinition>
+                    <ColumnDefinition Width="150"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                </Grid.RowDefinitions>
+                <TextBlock Margin="2" Grid.Row="0" Grid.Column="0" Text="Try" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="0" Grid.Column="1"  Name="ckbIsTry" VerticalAlignment="Center" IsChecked="{Binding Try, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+                <TextBlock Margin="2" Grid.Row="0" Grid.Column="2" Text="IsEnabled" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="0" Grid.Column="3"  Name="ckbIsEnabled" VerticalAlignment="Center" IsChecked="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+                <TextBlock Margin="2" Grid.Row="1" Grid.Column="0" Text="Command Text" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <UserControls:ValueTextBox Margin="2" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Height="Auto" VerticalAlignment="Center"  ValueText="{Binding CommandText, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Parameters="{Binding Path=ParameterCollection}" />
+                <TextBlock Margin="2" Grid.Row="2" Grid.Column="0" Text="Expected Result" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <TextBox Margin="2" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"  Name="tbExpectedResult" Height="Auto" TextWrapping="Wrap" AcceptsReturn="True"  Text="{Binding ExpectedResult, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" HorizontalAlignment="Stretch" VerticalAlignment="Center"></TextBox>
+            </Grid>
+        </StackPanel>
+        <Expander Grid.Row="1" VerticalAlignment="Top" Header="Advanced Properties">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="180"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                    <ColumnDefinition Width="180"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                    <RowDefinition MinHeight="30"></RowDefinition>
+                </Grid.RowDefinitions>
+                <TextBlock Margin="2" Grid.Row="0" Grid.Column="0" Text="Remote RunAs Username" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <UserControls:ValueTextBox Margin="2" Grid.Row="0" Grid.Column="1" Height="Auto" VerticalAlignment="Center" ValueText="{Binding RemoteRunAsUsername, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Parameters="{Binding Path=ParameterCollection}" />
+                <TextBlock Margin="2"  Grid.Row="0" Grid.Column="2" Text="Remote RunAs Password" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <UserControls:ValueTextBox Margin="2" Grid.Row="0" Grid.Column="3" Height="Auto" VerticalAlignment="Center"  ValueText="{Binding RemoteRunAsPassword, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Parameters="{Binding Path=ParameterCollection}" />
+
+                <TextBlock Margin="2" Grid.Row="1" Grid.Column="0" Text="Architecture" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <ComboBox Margin="2"  Grid.Row="1" Grid.Column="1"  Name="cmbArchitecture" VerticalAlignment="Center" SelectedValue="{Binding Architecture, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" SelectedValuePath="Key" DisplayMemberPath="Value"></ComboBox>
+                <TextBlock Margin="2"  Grid.Row="1" Grid.Column="2" Text="Timeout Seconds" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <TextBox Margin="2" Grid.Row="1" Grid.Column="3"  Name="tbTimeoutSeconds" Height="Auto" TextWrapping="Wrap" AcceptsReturn="True"  VerticalAlignment="Center" Text="{Binding TimeOutSeconds, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></TextBox>
+
+                <TextBlock Margin="2" Grid.Row="2" Grid.Column="0" Text="Reboot" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="2" Grid.Column="1"  Name="ckbReboot" VerticalAlignment="Center" IsChecked="{Binding IsRebootRequired, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+                <TextBlock Margin="2" Grid.Row="2" Grid.Column="2" Text="UI Interactive" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="2" Grid.Column="3"  Name="ckbUIInteractive" VerticalAlignment="Center" IsChecked="{Binding IsUIInteractive, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+
+                <TextBlock Margin="2" Grid.Row="3" Grid.Column="0" Text="Not Load Profile" FontWeight="Bold"  VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="3" Grid.Column="1"  Name="ckbNotLoadProfile" VerticalAlignment="Center" IsChecked="{Binding IsNotLoadProfile, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+                <TextBlock Margin="2" Grid.Row="3" Grid.Column="2" Text="RunAs System Account" FontWeight="Bold"  VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="3" Grid.Column="3"  Name="ckbRunAsSystemAccount" VerticalAlignment="Center" IsChecked="{Binding IsRunAsSystemAccount, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+
+                <TextBlock Margin="2" Grid.Row="4" Grid.Column="0" Text="RunAs Limitted User" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="4" Grid.Column="1"  Name="ckbRunAsLimittedUser" VerticalAlignment="Center" IsChecked="{Binding IsRunAsLimittedUser, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+                <TextBlock Margin="2" Grid.Row="4" Grid.Column="2" Text="Do not wait for exit" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <CheckBox Margin="2" Grid.Row="4" Grid.Column="3"  Name="ckbIsNotWaitTerminate" VerticalAlignment="Center" IsChecked="{Binding IsNotWaitForTerminate, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></CheckBox>
+
+                <TextBlock Margin="2" Grid.Row="5" Grid.Column="0" Text="Output Parameter Name" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <TextBox Margin="2" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3"  Name="tbOutputParameter" VerticalAlignment="Center" Text="{Binding OutputParameter, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></TextBox>
+
+                <TextBlock Margin="2" Grid.Row="6" Grid.Column="0" Text="Working Directory" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <UserControls:ValueTextBox Margin="2" Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Height="Auto" VerticalAlignment="Center"  ValueText="{Binding WorkingDirectory, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Parameters="{Binding Path=ParameterCollection}" />
+
+                <TextBlock Margin="2" Grid.Row="7" Grid.Column="0" Text="Retry Times" FontWeight="Bold"  VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <TextBox Margin="2" Grid.Row="7" Grid.Column="1"  Name="tbRetryTimes" VerticalAlignment="Center" Text="{Binding RetryTimes, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></TextBox>
+                <TextBlock Margin="2" Grid.Row="7" Grid.Column="2" Text="Retry Interval Seconds" FontWeight="Bold"  VerticalAlignment="Center" HorizontalAlignment="Right"></TextBlock>
+                <TextBox Margin="2" Grid.Row="7" Grid.Column="3"  Name="tbRetryIntervalSeconds" VerticalAlignment="Center" Text="{Binding RetryIntervalSeconds, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"></TextBox>
+
+            </Grid>
+        </Expander>
+    </Grid>
+</UserControl>

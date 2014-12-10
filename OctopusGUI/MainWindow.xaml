@@ -1,0 +1,852 @@
+﻿<Window xmlns:UserControls="clr-namespace:OctopusGUI.UserControls"  x:Class="OctopusGUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:OctopusGUI"
+        Title="HP Octopus" Height="600" Width="850" Icon="/OctopusGUI;component/logo.ico" Closing="Window_Closing">
+    <Window.Resources>
+        <RoutedCommand x:Key="Exit"/>
+        <RoutedCommand x:Key="StartRun"/>
+        <RoutedCommand x:Key="StopRun"/>
+        <RoutedCommand x:Key="ReplayFailedRun"/>
+        <RoutedCommand x:Key="ShowLog"/>
+        <RoutedCommand x:Key="GetConsole"/>
+        <RoutedCommand x:Key="Help"/>
+        <RoutedCommand x:Key="About"/>
+        <local:StatusImageConverter x:Key="StatusImageConverter" />
+        <local:MachinesStringConverter x:Key="MachinesStringConverter" />
+        <local:EncryptedValueConverter x:Key="EncryptedValueConverter" />
+        <local:MachinesNameConverter x:Key="MachinesNameConverter"/>
+        <Style TargetType="{x:Type Image}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type UIElement}, AncestorLevel=1}, Path=IsEnabled}"  Value="False">
+                    <Setter Property="Opacity"  Value="0.2" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="{x:Type TreeViewItem}">
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </Style>
+        <ControlTemplate x:Key="loadingAnimation">
+            <ControlTemplate.Triggers>
+                <Trigger Property="Visibility" Value="Visible">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard Name="animation">
+                            <Storyboard>
+                                <DoubleAnimation From="0" To="359" Duration="0:0:3" RepeatBehavior="Forever"
+                                                 Storyboard.TargetName="angle" Storyboard.TargetProperty="Angle"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="animation"/>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </ControlTemplate.Triggers>
+            <Image Name="content" Opacity="1">
+                <Image.Source>
+                    <DrawingImage>
+                        <DrawingImage.Drawing>
+                            <DrawingGroup>
+                                <GeometryDrawing Brush="Transparent">
+                                    <GeometryDrawing.Geometry>
+                                        <RectangleGeometry Rect="0,0,1,1"/>
+                                    </GeometryDrawing.Geometry>
+                                </GeometryDrawing>
+                                <DrawingGroup>
+                                    <DrawingGroup.Transform>
+                                        <RotateTransform x:Name="angle" Angle="0" CenterX="0.5" CenterY="0.5"/>
+                                    </DrawingGroup.Transform>
+                                    <GeometryDrawing>
+                                        <GeometryDrawing.Pen>
+                                            <Pen Brush="Blue" Thickness="0.1"/>
+                                        </GeometryDrawing.Pen>
+                                        <GeometryDrawing.Geometry>
+                                            <PathGeometry>
+                                                <PathFigure StartPoint="0.9,0.5">
+                                                    <ArcSegment Point="0.5,0.1" RotationAngle="90" SweepDirection="Clockwise" IsLargeArc="True" Size="0.4,0.4"/>
+                                                </PathFigure>
+                                            </PathGeometry>
+                                        </GeometryDrawing.Geometry>
+                                    </GeometryDrawing>
+                                    <GeometryDrawing Brush="Blue">
+                                        <GeometryDrawing.Geometry>
+                                            <PathGeometry>
+                                                <PathFigure StartPoint="0.5,0">
+                                                    <LineSegment Point="0.7,0.1" />
+                                                    <LineSegment Point="0.5,0.2" />
+                                                </PathFigure>
+                                            </PathGeometry>
+                                        </GeometryDrawing.Geometry>
+                                    </GeometryDrawing>
+                                </DrawingGroup>
+                            </DrawingGroup>
+                        </DrawingImage.Drawing>
+                    </DrawingImage>
+                </Image.Source>
+            </Image>
+        </ControlTemplate>        
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="New" CanExecute="NewCanExecute"  Executed="NewExecute"/>
+        <CommandBinding Command="Open" CanExecute="OpenCanExecute"  Executed="OpenExecute"/>
+        <CommandBinding Command="Save" CanExecute="SaveCanExecute"  Executed="SaveExecute"/>
+        <CommandBinding Command="SaveAs" CanExecute="SaveAsCanExecute"  Executed="SaveAsExecute"/>
+        <CommandBinding Command="Close" CanExecute="CloseCanExecute"  Executed="CloseExecute"/>
+        <CommandBinding Command="{StaticResource Exit}" CanExecute="ExitCanExecute"  Executed="ExitExecute"/>
+        <CommandBinding Command="{StaticResource StartRun}" CanExecute="StartRunCanExecute"  Executed="StartRunExecute"/>
+        <CommandBinding Command="{StaticResource StopRun}" CanExecute="StopRunCanExecute"  Executed="StopRunExecute"/>
+        <CommandBinding Command="{StaticResource ReplayFailedRun}" CanExecute="ReplayFailedRunCanExecute"  Executed="ReplayFailedRunExecute"/>
+        <CommandBinding Command="{StaticResource ShowLog}" CanExecute="ShowLogCanExecute"  Executed="ShowLogExecute"/>
+        <CommandBinding Command="{StaticResource GetConsole}" CanExecute="GetConsoleCanExecute"  Executed="GetConsoleExecute"/>
+        <CommandBinding Command="{StaticResource Help}" CanExecute="HelpCanExecute"  Executed="HelpExecute"/>
+        <CommandBinding Command="{StaticResource About}" CanExecute="AboutCanExecute"  Executed="AboutExecute"/>
+    </Window.CommandBindings>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="26"></RowDefinition>
+            <RowDefinition Height="35"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Menu Name="menuMain" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="26">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="New">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/new.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Open..." Command="Open">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/open.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Save" Command="Save">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/save.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_SaveAs..." Command="SaveAs">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/saveas.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Close" Command="Close">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/close.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="_Exit" Command="{StaticResource Exit}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/exit.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Execution">
+                <MenuItem Header="_Start" Command="{StaticResource StartRun}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/play.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Stop" Command="{StaticResource StopRun}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/stop.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Replay Failed" Command="{StaticResource ReplayFailedRun}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/replay.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Log" Command="{StaticResource ShowLog}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/log.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Console">
+                <MenuItem Header="_Console" Command="{StaticResource GetConsole}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/console.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_Help" Command="{StaticResource Help}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/help.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_About" Command="{StaticResource About}">
+                    <MenuItem.Icon>
+                        <Image Width="16" Height="16" Source="/OctopusGUI;component/images/about.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+        <ToolBar Height="34" HorizontalAlignment="Stretch" Name="mainToolBar" VerticalAlignment="Top" Grid.Row="1">
+            <Button Height="32" HorizontalAlignment="Left" Name="btnNew" VerticalAlignment="Top" Command="New">
+                <Image Source="/OctopusGUI;component/images/new.png" ToolTip="New File" />
+            </Button>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnOpen" VerticalAlignment="Top" Command="Open">
+                <Image Source="/OctopusGUI;component/images/open.png" ToolTip="Open File" />
+            </Button>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnSave" VerticalAlignment="Top" Command="Save">
+                <Image Source="/OctopusGUI;component/images/save.png" ToolTip="Save File" />
+            </Button>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnSaveAs" VerticalAlignment="Top" Command="SaveAs">
+                <Image Source="/OctopusGUI;component/images/saveas.png" ToolTip="SaveAs File" />
+            </Button>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnClose" VerticalAlignment="Top" Command="Close">
+                <Image Source="/OctopusGUI;component/images/close.png"  ToolTip="Close File"/>
+            </Button>
+            <Separator></Separator>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnStart" VerticalAlignment="Top" Command="{StaticResource StartRun}">
+                <Image Source="/OctopusGUI;component/images/play.png"  ToolTip="Start"/>
+            </Button>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnStop" VerticalAlignment="Top" Command="{StaticResource StopRun}">
+                <Image Source="/OctopusGUI;component/images/stop.png"  ToolTip="Stop"/>
+            </Button>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnReplayFailedRun" VerticalAlignment="Top" Command="{StaticResource ReplayFailedRun}">
+                <Image Source="/OctopusGUI;component/images/replay.png"  ToolTip="Replay Failed Run"/>
+            </Button>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnShowLog" VerticalAlignment="Top" Command="{StaticResource ShowLog}">
+                <Image Source="/OctopusGUI;component/images/log.png"  ToolTip="View Log"/>
+            </Button>
+            <Separator></Separator>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnGetConsole" VerticalAlignment="Top" Command="{StaticResource GetConsole}">
+                <Image Source="/OctopusGUI;component/images/console.png"  ToolTip="Console"/>
+            </Button>
+            <Separator></Separator>
+            <Button Height="32" HorizontalAlignment="Left" Name="btnHelp" VerticalAlignment="Top" Command="{StaticResource Help}">
+                <Image Source="/OctopusGUI;component/images/help.png"  ToolTip="Help"/>
+            </Button>
+        </ToolBar>
+        <DockPanel Grid.Row="2" HorizontalAlignment="Stretch" Name="mainDockPanel" VerticalAlignment="Stretch">
+            <Grid>
+                <TabControl  HorizontalAlignment="Stretch" Name="mainTab" VerticalAlignment="Stretch" Margin="2">
+                    <TabItem Header="Parameters" Name="tabParams">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"></RowDefinition>
+                                <RowDefinition Height="24"></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <DataGrid Grid.Row="0" HorizontalAlignment="Stretch" Name="paramsDataGrid" VerticalAlignment="Stretch" AutoGenerateColumns="False" GridLinesVisibility="All" 
+                                      ItemsSource="{Binding ParameterCollection}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}" CanUserAddRows="False" CanUserDeleteRows="False">
+                                <DataGrid.InputBindings>
+                                    <KeyBinding Key="DELETE" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedItems, ElementName=paramsDataGrid}" />
+                                </DataGrid.InputBindings>
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Add" Command="{Binding InsertCommand}">
+                                            <MenuItem.Icon>
+                                                <Image Source="/OctopusGUI;component/images/add.png" Width="16" Height="16"  />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Delete" Command="{Binding DeleteCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                            <MenuItem.Icon>
+                                                <Image Source="/OctopusGUI;component/images/delete.png" Width="16" Height="16"  />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridCheckBoxColumn Header="Encrypt" Width="80" Binding="{Binding IsEncrypted, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+                                        <DataGridCheckBoxColumn.ElementStyle>
+                                            <Style TargetType="CheckBox">
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="HorizontalAlignment" Value="Center"/>
+                                            </Style>
+                                        </DataGridCheckBoxColumn.ElementStyle>
+                                    </DataGridCheckBoxColumn>
+                                    <DataGridTextColumn Header="Name" FontWeight="Bold" Width="30*" Binding="{Binding Name, UpdateSourceTrigger=LostFocus, Mode=TwoWay}"></DataGridTextColumn>
+                                    <DataGridTemplateColumn Width="70*" Header="Value">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <UserControls:ValueTextBlock Parameters="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type DataGrid}}, Path=DataContext.ParameterCollection}">
+                                                    <UserControls:ValueTextBlock.TextValue>
+                                                        <MultiBinding Converter="{StaticResource EncryptedValueConverter}">
+                                                            <MultiBinding.Bindings>
+                                                                <Binding Path="Value" />
+                                                                <Binding Path="IsEncrypted" />
+                                                                <Binding Path="MachineID" />
+                                                            </MultiBinding.Bindings>
+                                                        </MultiBinding>
+                                                    </UserControls:ValueTextBlock.TextValue>
+                                                </UserControls:ValueTextBlock>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                        <DataGridTemplateColumn.CellEditingTemplate>
+                                            <DataTemplate>
+                                                <UserControls:ValueTextBox ValueText="{Binding Value, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                                           Parameters="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type DataGrid}}, Path=DataContext.ParameterCollection}"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellEditingTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <StatusBar Grid.Row="1" HorizontalAlignment="Stretch">
+                                <TextBlock Name="tbParameterMessage" HorizontalAlignment="Stretch" Text="{Binding Message}"/>
+                            </StatusBar>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Machines" Name="tabMachines">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"></RowDefinition>
+                                <RowDefinition Height="24"></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <DockPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <DataGrid DockPanel.Dock="Top" HorizontalAlignment="Stretch" Name="machinesDataGrid" VerticalAlignment="Stretch"  AutoGenerateColumns="False" GridLinesVisibility="All" 
+                                          ItemsSource="{Binding MachineCollection}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}" CanUserAddRows="False" CanUserDeleteRows="False">
+                                    <DataGrid.InputBindings>
+                                        <KeyBinding Key="DELETE" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedItems, ElementName=machinesDataGrid}" />
+                                    </DataGrid.InputBindings>
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Add" Command="{Binding InsertCommand}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/add.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Delete" Command="{Binding DeleteCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/delete.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Header="Name" Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" Margin="1" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                            <DataGridTemplateColumn.CellEditingTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" TextWrapping="Wrap" Margin="1" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellEditingTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="IP" Width="120">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                        <TextBlock Text="{Binding IP}" Margin="1" />
+                                                    </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                            <DataGridTemplateColumn.CellEditingTemplate>
+                                                <DataTemplate>
+                                                    <TextBox Text="{Binding IP, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" TextWrapping="Wrap" Margin="1" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellEditingTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="Domain" Width="180">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <UserControls:ValueTextBlock 
+                                                        Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection}" 
+                                                        TextValue="{Binding Path=Domain}">
+                                                    </UserControls:ValueTextBlock>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                            <DataGridTemplateColumn.CellEditingTemplate>
+                                                <DataTemplate>
+                                                    <UserControls:ValueTextBox ValueText="{Binding Domain, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" 
+                                                                               Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellEditingTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="Username" Width="180">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <UserControls:ValueTextBlock 
+                                                        Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection,PresentationTraceSources.TraceLevel=High}" 
+                                                        TextValue="{Binding Path=Username}">
+                                                    </UserControls:ValueTextBlock>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                            <DataGridTemplateColumn.CellEditingTemplate>
+                                                <DataTemplate>
+                                                    <UserControls:ValueTextBox ValueText="{Binding Username, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" 
+                                                                               Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellEditingTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="Password" Width="180">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <UserControls:ValueTextBlock 
+                                                        Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection}" 
+                                                        TextValue="{Binding Path=Password}">
+                                                    </UserControls:ValueTextBlock>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                            <DataGridTemplateColumn.CellEditingTemplate>
+                                                <DataTemplate>
+                                                    <UserControls:ValueTextBox ValueText="{Binding Password, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" 
+                                                                               Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellEditingTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridCheckBoxColumn Header="Is Linux" Width="50" Binding="{Binding IsLinux, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+                                            <DataGridCheckBoxColumn.ElementStyle>
+                                                <Style TargetType="CheckBox">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridCheckBoxColumn.ElementStyle>
+                                        </DataGridCheckBoxColumn>
+                                        <DataGridComboBoxColumn Header="x86/x64" Width="60" >
+                                            <DataGridComboBoxColumn.ElementStyle>
+                                                <Style TargetType="ComboBox">
+                                                    <Setter Property="ItemsSource" Value="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type DataGrid}}, Path=DataContext.ArchitectureList}"/>
+                                                    <Setter Property="DisplayMemberPath" Value="Value"/>
+                                                    <Setter Property="SelectedValuePath" Value="Key"/>
+                                                    <Setter Property="SelectedValue" Value="{Binding Architecture, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"/>
+                                                </Style>
+                                            </DataGridComboBoxColumn.ElementStyle>
+                                            <DataGridComboBoxColumn.EditingElementStyle>
+                                                <Style TargetType="ComboBox">
+                                                    <Setter Property="ItemsSource" Value="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type DataGrid}}, Path=DataContext.ArchitectureList}"/>
+                                                    <Setter Property="DisplayMemberPath" Value="Value"/>
+                                                    <Setter Property="SelectedValuePath" Value="Key"/>
+                                                    <Setter Property="SelectedValue" Value="{Binding Architecture, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"/>
+                                                </Style>
+                                            </DataGridComboBoxColumn.EditingElementStyle>
+                                        </DataGridComboBoxColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </DockPanel>
+                            <StatusBar Grid.Row="1" HorizontalAlignment="Stretch">
+                                <TextBlock Name="tbMachineMessage" HorizontalAlignment="Stretch" Text="{Binding Message}"/>
+                            </StatusBar>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Actions" Name="tabActions">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20*"></ColumnDefinition>
+                                <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                <ColumnDefinition Width="80*"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"></RowDefinition>
+                                <RowDefinition Height="24"></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <DataGrid Grid.Row="0" Grid.Column="0" VerticalAlignment="Stretch"  Name="actionsDataGrid" HorizontalAlignment="Stretch"  AutoGenerateColumns="False" 
+                                      GridLinesVisibility="All" ItemsSource="{Binding ActionCollection}" SelectedItem="{Binding SelectedRow, Mode=TwoWay}" SelectionChanged="actionsDataGrid_SelectionChanged"  CanUserAddRows="False" CanUserDeleteRows="False">
+                                <DataGrid.InputBindings>
+                                    <KeyBinding Key="DELETE" Command="{Binding DeleteActionCommand}" CommandParameter="{Binding SelectedItems, ElementName=actionsDataGrid}" />
+                                </DataGrid.InputBindings>
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Add" Command="{Binding InsertActionCommand}">
+                                            <MenuItem.Icon>
+                                                <Image Source="/OctopusGUI;component/images/add.png" Width="16" Height="16"  />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Delete" Command="{Binding DeleteActionCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                            <MenuItem.Icon>
+                                                <Image Source="/OctopusGUI;component/images/delete.png" Width="16" Height="16"  />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Action Library" FontWeight="Bold" Width="*" Binding="{Binding Name}"></DataGridTextColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <GridSplitter Grid.Row="0"  Grid.Column="1" Width="2" HorizontalAlignment="Center" ShowsPreview="True" Background="Gray" />
+                            <Grid Grid.Row="0" Grid.Column="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="55*"></RowDefinition>
+                                    <RowDefinition Height="2"></RowDefinition>
+                                    <RowDefinition Height="45*"></RowDefinition>
+                                </Grid.RowDefinitions>
+                                <GroupBox Grid.Row="0" HorizontalAlignment="Stretch" Name="gbCMD" VerticalAlignment="Stretch" Header="Action's Commands" >
+                                    <Grid>
+                                        <DataGrid Grid.Row="1" VerticalAlignment="Stretch"  Name="actionsCommandsDataGrid"  AutoGenerateColumns="False" GridLinesVisibility="All" CanUserSortColumns="False"
+                                                  SelectionChanged="actionsCommandsDataGrid_SelectionChanged"  SelectedItem="{Binding SelectedCommandRow, Mode=TwoWay}" CanUserAddRows="False" CanUserDeleteRows="False">
+                                            <DataGrid.InputBindings>
+                                                <KeyBinding Key="DELETE" Command="{Binding DeleteCommandCommand}" CommandParameter="{Binding SelectedItems, ElementName=actionsCommandsDataGrid}" />
+                                            </DataGrid.InputBindings>
+                                            <DataGrid.ContextMenu>
+                                                <ContextMenu>
+                                                    <MenuItem Header="Add" Command="{Binding InsertCommandCommand}">
+                                                        <MenuItem.Icon>
+                                                            <Image Source="/OctopusGUI;component/images/add.png" Width="16" Height="16" />
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Delete" Command="{Binding DeleteCommandCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                        <MenuItem.Icon>
+                                                            <Image Source="/OctopusGUI;component/images/delete.png" Width="16" Height="16"  />
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Move Up" Command="{Binding MoveUpCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                        <MenuItem.Icon>
+                                                            <Image Source="/OctopusGUI;component/images/up.png" Width="16" Height="16"  />
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                    <MenuItem Header="Move Down" Command="{Binding MoveDownCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                        <MenuItem.Icon>
+                                                            <Image Source="/OctopusGUI;component/images/down.png" Width="16" Height="16"  />
+                                                        </MenuItem.Icon>
+                                                    </MenuItem>
+                                                </ContextMenu>
+                                            </DataGrid.ContextMenu>
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn FontWeight="Bold" Width="30" Binding="{Binding Sequence}" IsReadOnly="True" SortDirection="Ascending"></DataGridTextColumn>
+                                                <DataGridCheckBoxColumn Header="Try" Binding="{Binding Try, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+                                                    <DataGridCheckBoxColumn.ElementStyle>
+                                                        <Style TargetType="CheckBox">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                            <Setter Property="IsThreeState" Value="True"/>
+                                                        </Style>
+                                                    </DataGridCheckBoxColumn.ElementStyle>
+                                                </DataGridCheckBoxColumn>
+                                                <DataGridCheckBoxColumn Header="IsEnabled" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+                                                    <DataGridCheckBoxColumn.ElementStyle>
+                                                        <Style TargetType="CheckBox">
+                                                            <Setter Property="VerticalAlignment" Value="Center"/>
+                                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                            <Setter Property="IsThreeState" Value="True"/>
+                                                        </Style>
+                                                    </DataGridCheckBoxColumn.ElementStyle>
+                                                </DataGridCheckBoxColumn>
+                                                <DataGridTextColumn Header="Type" FontWeight="Bold" Width="70" Binding="{Binding CommandType}" IsReadOnly="True"></DataGridTextColumn>
+                                                <DataGridTemplateColumn Header="Command" Width="*">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <UserControls:ValueTextBlock 
+                                                        Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection}" 
+                                                        TextValue="{Binding Path=CommandText}">
+                                                            </UserControls:ValueTextBlock>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Grid>
+                                </GroupBox>
+                                <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Height="2" Background="Gray"/>
+                                <GroupBox Grid.Row="2" HorizontalAlignment="Stretch" Name="gbCMDProperties" VerticalAlignment="Stretch" Header="Command Properties" Margin="10" >
+                                    <ScrollViewer Name="scrollViewer" ScrollViewer.IsDeferredScrollingEnabled="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Margin="2">
+                                        <Grid Name="gridCMDProperties" HorizontalAlignment="Left"></Grid>
+                                    </ScrollViewer>
+                                </GroupBox>
+                            </Grid>
+                            <StatusBar Grid.Row="1" Grid.ColumnSpan="3" HorizontalAlignment="Stretch">
+                                <TextBlock Name="tbActionMessage" HorizontalAlignment="Stretch" Text="{Binding Message}"/>
+                            </StatusBar>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Tasks" Name="tabTasks">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="45*" />
+                                <RowDefinition Height="2" />
+                                <RowDefinition Height="55*" />
+                                <RowDefinition Height="26" />
+                            </Grid.RowDefinitions>
+                            <GroupBox Grid.Row="0" HorizontalAlignment="Stretch" Name="gbTask" VerticalAlignment="Stretch" Header="Task Definition" >
+                                <DataGrid HorizontalAlignment="Stretch" Name="taskDataGrid" VerticalAlignment="Stretch"  AutoGenerateColumns="False" GridLinesVisibility="All" 
+                                          ItemsSource="{Binding TaskCollection}"  SelectedItem="{Binding SelectedRow, Mode=TwoWay}" CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False" SelectionChanged="taskDataGrid_SelectionChanged">
+                                    <DataGrid.InputBindings>
+                                        <KeyBinding Key="DELETE" Command="{Binding DeleteTaskCommand}" CommandParameter="{Binding SelectedItems, ElementName=taskDataGrid}" />
+                                    </DataGrid.InputBindings>
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Add" Command="{Binding InsertTaskCommand}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/add.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Delete" Command="{Binding DeleteTaskCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/delete.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Width="30" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+                                            <DataGridCheckBoxColumn.ElementStyle>
+                                                <Style TargetType="CheckBox">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Setter Property="IsThreeState" Value="True"/>
+                                                </Style>
+                                            </DataGridCheckBoxColumn.ElementStyle>
+                                        </DataGridCheckBoxColumn>
+                                        <DataGridComboBoxColumn x:Name="dgCmbSequence"  Header="#" Width="35" SelectedItemBinding="{Binding Sequence, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" SortDirection="Ascending">
+                                            <DataGridComboBoxColumn.ElementStyle>
+                                                <Style TargetType="ComboBox">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridComboBoxColumn.ElementStyle>
+                                        </DataGridComboBoxColumn>
+                                        <DataGridTextColumn Header="Name" MinWidth="200" Width="Auto" Binding="{Binding Name, UpdateSourceTrigger=LostFocus, Mode=TwoWay}">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTemplateColumn Header="Machines" MinWidth="200">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button ToolTip="Select Machines for Task" 
+                                                                Command="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type DataGrid}}, Path=DataContext.MachineOnTaskChangeCommand}"
+                                                                CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type DataGrid}}, Path=SelectedItems}">
+                                                            <Image Source="/OctopusGUI;component/images/machine.png" Height="16" Width="16" />
+                                                        </Button>
+                                                        <TextBlock Text="{Binding Machines, Converter={StaticResource MachinesStringConverter}, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" Margin="2" VerticalAlignment="Center"></TextBlock>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+                            <GridSplitter Grid.Row="1"  VerticalAlignment="Center" ShowsPreview="True" Background="Gray" />
+                            <GroupBox Grid.Row="2" HorizontalAlignment="Stretch" Name="gbTaskActions" VerticalAlignment="Stretch" Header="Task Actions" >
+                                <DataGrid HorizontalAlignment="Stretch" Name="taskActionsDataGrid" VerticalAlignment="Stretch"  AutoGenerateColumns="False" GridLinesVisibility="All"  
+                                          CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False" SelectedItem="{Binding SelectedTaskActionRow, Mode=TwoWay}" >
+                                    <DataGrid.InputBindings>
+                                        <KeyBinding Key="DELETE" Command="{Binding DeleteTaskActionCommand}" CommandParameter="{Binding SelectedItems, ElementName=taskActionsDataGrid}" />
+                                    </DataGrid.InputBindings>
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Add" Command="{Binding InsertTaskActionCommand}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/add.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Delete" Command="{Binding DeleteTaskActionCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/delete.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Move Up" Command="{Binding MoveUpTaskActionCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/up.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Move Down" Command="{Binding MoveDownTaskActionCommand}" CommandParameter="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ContextMenu}}, Path=PlacementTarget.SelectedItems}">
+                                                <MenuItem.Icon>
+                                                    <Image Source="/OctopusGUI;component/images/down.png" Width="16" Height="16"  />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Width="30" Binding="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+                                            <DataGridCheckBoxColumn.ElementStyle>
+                                                <Style TargetType="CheckBox">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Setter Property="IsThreeState" Value="True"/>
+                                                </Style>
+                                            </DataGridCheckBoxColumn.ElementStyle>
+                                        </DataGridCheckBoxColumn>
+                                        <DataGridCheckBoxColumn Header="Fixed" Binding="{Binding IsFixed, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
+                                            <DataGridCheckBoxColumn.ElementStyle>
+                                                <Style TargetType="CheckBox">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    <Setter Property="IsThreeState" Value="True"/>
+                                                </Style>
+                                            </DataGridCheckBoxColumn.ElementStyle>
+                                        </DataGridCheckBoxColumn>
+                                        <DataGridTextColumn Header="#" FontWeight="Bold" Width="30" Binding="{Binding Sequence}" IsReadOnly="True">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="Action" IsReadOnly="True" Binding="{Binding Name, UpdateSourceTrigger=LostFocus, Mode=TwoWay}" MinWidth="200" Width="Auto">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTemplateColumn Header="Machine" MinWidth="200">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button ToolTip="Select Machine for Action" 
+                                                                Command="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type DataGrid}}, Path=DataContext.MachineOnTaskActionChangeCommand}"
+                                                                CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type DataGrid}}, Path=SelectedItems}">
+                                                            <Image Source="/OctopusGUI;component/images/machine.png" Height="16" Width="16" />
+                                                        </Button>
+                                                        <TextBlock Text="{Binding Machine, Converter={StaticResource MachinesNameConverter}, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" Width="Auto" Margin="2" VerticalAlignment="Center"></TextBlock>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+                            <StatusBar Grid.Row="3" HorizontalAlignment="Stretch">
+                                <TextBlock Name="tbRunMessage" HorizontalAlignment="Stretch" Text="{Binding Message}"/>
+                            </StatusBar>
+                        </Grid>
+                    </TabItem>
+                    <TabItem Header="Execution" Name="tabExecution">
+                        <Grid>
+                            <GroupBox Grid.Row="1" HorizontalAlignment="Stretch" Name="gbRunInstance" VerticalAlignment="Stretch" Header="Task Instances" >
+                                <DataGrid HorizontalAlignment="Stretch" 
+                                          Name="runInstanceDataGrid" 
+                                          VerticalAlignment="Stretch"  
+                                          AutoGenerateColumns="False" 
+                                          GridLinesVisibility="None" 
+                                          ItemsSource="{Binding RunInstanceCollection}"  
+                                          CanUserAddRows="False" 
+                                          CanUserDeleteRows="False" 
+                                          CanUserSortColumns="False"
+                                          RowDetailsVisibilityMode="VisibleWhenSelected" 
+                                          SelectionMode="Single" 
+                                          SelectedItem="{Binding SelectedRow, Mode=TwoWay}" 
+                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">                                    
+                                    <DataGrid.RowDetailsTemplate>
+                                        <DataTemplate>
+                                            <GroupBox HorizontalAlignment="Stretch" Name="gbActionInstance" VerticalAlignment="Stretch" Header="Action Instances" >
+                                                <DataGrid Margin="20,0,0,0" 
+                                                          HorizontalAlignment="Stretch" 
+                                                          Name="runActionInstanceDataGrid" 
+                                                          VerticalAlignment="Stretch" 
+                                                          AutoGenerateColumns="False" 
+                                                          GridLinesVisibility="None" 
+                                                          ItemsSource="{Binding ActionInstanceCollection}" 
+                                                          CanUserAddRows="False" 
+                                                          CanUserDeleteRows="False" 
+                                                          CanUserSortColumns="False"
+                                                          RowDetailsVisibilityMode="VisibleWhenSelected" 
+                                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <DataGrid.RowDetailsTemplate>
+                                                        <DataTemplate>
+                                                            <GroupBox HorizontalAlignment="Stretch" Name="gbCommmand" VerticalAlignment="Stretch" Header="Commands" >
+                                                                <DataGrid Margin="20,0,0,0" MaxHeight="400" HorizontalAlignment="Stretch" Name="runCommandDataGrid" VerticalAlignment="Stretch"  AutoGenerateColumns="False" GridLinesVisibility="None" 
+                                          ItemsSource="{Binding Action.ActionCommands}"  CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False" >
+                                                                    <DataGrid.Columns>
+                                                                        <DataGridTemplateColumn IsReadOnly="True" Width="25">
+                                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                                <DataTemplate>
+                                                                                    <ContentPresenter Content="{Binding Path=Status, Converter={StaticResource StatusImageConverter}}" ToolTip="{Binding Status}"/>
+                                                                                </DataTemplate>
+                                                                            </DataGridTemplateColumn.CellTemplate>
+                                                                        </DataGridTemplateColumn>
+                                                                        <DataGridTemplateColumn Header="" Width="25">
+                                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                                <DataTemplate>
+                                                                                    <Image Source="/OctopusGUI;component/images/c.png"  Height="16" Width="16" Margin="1" />
+                                                                                </DataTemplate>
+                                                                            </DataGridTemplateColumn.CellTemplate>
+                                                                        </DataGridTemplateColumn>
+                                                                        <DataGridTemplateColumn Header="Type" MinWidth="80" Width="Auto">
+                                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                                <DataTemplate>
+                                                                                    <TextBlock Text="{Binding CommandType}"  Margin="1"></TextBlock>
+                                                                                </DataTemplate>
+                                                                            </DataGridTemplateColumn.CellTemplate>
+                                                                        </DataGridTemplateColumn>
+                                                                        <DataGridTemplateColumn Header="Command" Width="*">
+                                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                                <DataTemplate>
+                                                                                    <UserControls:ValueTextBlock 
+                                                                                        Parameters="{Binding ElementName=tabParams, Path=DataContext.ParameterCollection}" 
+                                                                                        TextValue="{Binding Path=CommandText}" Margin="1">
+                                                                                    </UserControls:ValueTextBlock>
+                                                                                </DataTemplate>
+                                                                            </DataGridTemplateColumn.CellTemplate>
+                                                                        </DataGridTemplateColumn>
+                                                                    </DataGrid.Columns>
+                                                                </DataGrid>
+                                                            </GroupBox>
+                                                        </DataTemplate>
+                                                    </DataGrid.RowDetailsTemplate>
+                                                    <DataGrid.Columns>
+                                                        <DataGridTemplateColumn IsReadOnly="True" Width="25">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <ContentPresenter Content="{Binding Path=Status, Converter={StaticResource StatusImageConverter}}" ToolTip="{Binding Status}"/>
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
+                                                        <DataGridTemplateColumn Header="" Width="25">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <Image Source="/OctopusGUI;component/images/a.png"  Height="16" Width="16" Margin="1" />
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
+                                                        <DataGridTemplateColumn Header="Machine" Width="Auto">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <StackPanel Orientation="Horizontal"  Margin="1">
+                                                                        <Image Source="/OctopusGUI;component/images/machine.png"  Height="16" Width="16" Margin="1" />
+                                                                        <TextBlock Text="{Binding Machine.Name}" Margin="1"></TextBlock>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
+                                                        <DataGridTemplateColumn Header="Action" MinWidth="80" Width="*">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <TextBlock Text="{Binding Action.Name}"  Margin="1"></TextBlock>
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                            </GroupBox>
+                                        </DataTemplate>
+                                    </DataGrid.RowDetailsTemplate>                                    
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn IsReadOnly="True" Width="25">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <ContentPresenter Content="{Binding Path=Status, Converter={StaticResource StatusImageConverter}}" ToolTip="{Binding Status}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="" Width="25" >
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Image Source="/OctopusGUI;component/images/t.png"  Height="16" Width="16" Margin="1" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="Machine" Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal"  Margin="1">
+                                                        <Image Source="/OctopusGUI;component/images/machine.png"  Height="16" Width="16" Margin="1" />
+                                                        <TextBlock Text="{Binding Machine.Name}" Margin="1"></TextBlock>
+                                                    </StackPanel>                                                    
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="Task" MinWidth="200" Width="*">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Task.Name}"  Margin="1"></TextBlock>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>                                                                     
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Grid>            
+        </DockPanel>        
+    </Grid>
+</Window>
